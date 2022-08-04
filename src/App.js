@@ -5,12 +5,13 @@ import myEpicNft from "./utils/MyEpicNFT.json";
 import React, { useEffect, useState } from "react";
 import { useReward } from 'react-rewards';
 import "./styles/App.css";
-import twitterLogo from "./assets/twitter-logo.svg";
 // Constantsを宣言する: constとは値書き換えを禁止した変数を宣言する方法です。
-const TWITTER_HANDLE = "あなたのTwitterのハンドルネームを貼り付けてください";
-const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
 const OPENSEA_LINK = "";
 const TOTAL_MINT_COUNT = 50;
+
+const CONTRACT_ADDRESS =
+"0x4124Db2881598e782BD91208b4601B373B8563e4";
+
 const App = () => {
   /*
    * ユーザーのウォレットアドレスを格納するために使用する状態変数を定義します。
@@ -20,6 +21,7 @@ const App = () => {
   console.log("currentAccount: ", currentAccount);
 
   const { reward, isAnimating } = useReward('rewardId', 'confetti');
+  const [lastTokenId, setLastTokenId] = useState(0);
 
   /*
    * ユーザーが認証可能なウォレットアドレスを持っているか確認します。
@@ -39,10 +41,22 @@ const App = () => {
      */
     const accounts = await ethereum.request({ method: "eth_accounts" });
 
+    let chainId = await ethereum.request({ method: "eth_chainId" });
+    console.log("Connected to chain " + chainId);
+    // 0x4 は　Rinkeby の ID です。
+    const rinkebyChainId = "0x4";
+    if (chainId !== rinkebyChainId) {
+      alert("You are not connected to the Rinkeby Test Network!");
+    }
+
     if (accounts.length !== 0) {
       const account = accounts[0];
       console.log("Found an authorized account:", account);
       setCurrentAccount(account);
+
+      // **** イベントリスナーをここで設定 ****
+      // この時点で、ユーザーはウォレット接続が済んでいます。
+      setupEventListener();
     } else {
       console.log("No authorized account found");
     }
@@ -69,14 +83,43 @@ const App = () => {
        * ウォレットアドレスを currentAccount に紐付けます。
        */
       setCurrentAccount(accounts[0]);
+
+      // **** イベントリスナーをここで設定 ****
+      setupEventListener();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const setupEventListener = async () => {
+    try {
+      const { ethereum } = window;
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        // NFT が発行されます。
+        const connectedContract = new ethers.Contract(
+          CONTRACT_ADDRESS,
+          myEpicNft.abi,
+          signer
+        );
+        // Event が　emit される際に、コントラクトから送信される情報を受け取っています。
+        connectedContract.on("NewEpicNFTMinted", (from, tokenId) => {
+          console.log(from, tokenId.toNumber());
+          alert(
+            `あなたのウォレットに NFT を送信しました。OpenSea に表示されるまで最大で10分かかることがあります。NFT へのリンクはこちらです: https://testnets.opensea.io/assets/${CONTRACT_ADDRESS}/${tokenId.toNumber()}`
+          );
+        });
+        console.log("Setup event listener!");
+      } else {
+        console.log("Ethereum object doesn't exist!");
+      }
     } catch (error) {
       console.log(error);
     }
   };
 
   const askContractToMintNft = async () => {
-    const CONTRACT_ADDRESS =
-      "0xdaD0017cefcEC87114dc8E1B679526066AD46B5C";
     try {
       const { ethereum } = window;
       if (ethereum) {
@@ -91,11 +134,18 @@ const App = () => {
         let nftTxn = await connectedContract.makeAnEpicNFT();
         console.log("Mining...please wait.");
         await nftTxn.wait();
+        const id = await connectedContract.getLastTokenId();
+        if (!id) return;
+        setLastTokenId(id.toNumber());
         reward();
   
         console.log(
-          `Mined, see transaction: https://goerli.etherscan.io/tx/${nftTxn.hash}`
+          `Mined, see transaction: https://rinkeby.etherscan.io/tx/${nftTxn.hash}`
         );
+        console.log(
+          `Last token id: ${lastTokenId}`
+        );
+
       } else {
         console.log("Ethereum object doesn't exist!");
       }
@@ -119,6 +169,8 @@ const App = () => {
   useEffect(() => {
     checkIfWalletIsConnected();
   }, []);
+
+
   return (
     <div className="App">
       <div className="container">
@@ -143,15 +195,6 @@ const App = () => {
               Mint NFT
             </button>
           )}
-        </div>
-        <div className="footer-container">
-          <img alt="Twitter Logo" className="twitter-logo" src={twitterLogo} />
-          <a
-            className="footer-text"
-            href={TWITTER_LINK}
-            target="_blank"
-            rel="noreferrer"
-          >{`built on @${TWITTER_HANDLE}`}</a>
         </div>
       </div>
     </div>
