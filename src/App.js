@@ -106,6 +106,9 @@ const App = () => {
         // Event が　emit される際に、コントラクトから送信される情報を受け取っています。
         connectedContract.on("NewEpicNFTMinted", (from, tokenId) => {
           console.log(from, tokenId.toNumber());
+          console.log(
+            `Mined, see rarible: https://rinkeby.rarible.com/token/${CONTRACT_ADDRESS}:${tokenId.toNumber()}`
+          );
           alert(
             `あなたのウォレットに NFT を送信しました。OpenSea に表示されるまで最大で10分かかることがあります。NFT へのリンクはこちらです: https://testnets.opensea.io/assets/${CONTRACT_ADDRESS}/${tokenId.toNumber()}`
           );
@@ -143,7 +146,7 @@ const App = () => {
           `Mined, see transaction: https://rinkeby.etherscan.io/tx/${nftTxn.hash}`
         );
         console.log(
-          `Last token id: ${lastTokenId}`
+          `number of minted nft: ${lastTokenId}`
         );
 
       } else {
