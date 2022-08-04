@@ -107,6 +107,9 @@ const App = () => {
         connectedContract.on("NewEpicNFTMinted", (from, tokenId) => {
           console.log(from, tokenId.toNumber());
           console.log(
+            `number of minted nft: ${lastTokenId}`
+          );
+          console.log(
             `Mined, see rarible: https://rinkeby.rarible.com/token/${CONTRACT_ADDRESS}:${tokenId.toNumber()}`
           );
           alert(
@@ -144,9 +147,6 @@ const App = () => {
   
         console.log(
           `Mined, see transaction: https://rinkeby.etherscan.io/tx/${nftTxn.hash}`
-        );
-        console.log(
-          `number of minted nft: ${lastTokenId}`
         );
 
       } else {
